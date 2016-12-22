@@ -1,11 +1,11 @@
 package com.zmxv.RNSound;
 
-import android.media.MediaPlayer;
-import android.media.MediaPlayer.OnCompletionListener;
-import android.media.MediaPlayer.OnErrorListener;
 import android.net.Uri;
 import android.util.Log;
 
+import com.devbrackets.android.exomedia.EMAudioPlayer;
+import com.devbrackets.android.exomedia.listener.OnCompletionListener;
+import com.devbrackets.android.exomedia.listener.OnErrorListener;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
@@ -19,7 +19,9 @@ import java.util.Map;
 import java.util.Set;
 
 public class RNSoundModule extends ReactContextBaseJavaModule {
-  Map<Integer, MediaPlayer> playerPool = new HashMap<>();
+  private static final String TAG = RNSoundModule.class.getSimpleName();
+  
+  Map<Integer, EMAudioPlayer> playerPool = new HashMap<>();
   ReactApplicationContext context;
   final static Object NULL = null;
 
@@ -35,7 +37,7 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void prepare(final String fileName, final Integer key, final Callback callback) {
-    MediaPlayer player = createMediaPlayer(fileName);
+    EMAudioPlayer player = createMediaPlayer(fileName);
     if (player == null) {
       WritableMap e = Arguments.createMap();
       e.putInt("code", -1);
@@ -44,8 +46,9 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
       return;
     }
     try {
-      player.prepare();
+      player.prepareAsync();
     } catch (Exception e) {
+      Log.w(TAG, "Error preparing audio with " + e.getLocalizedMessage());
     }
     this.playerPool.put(key, player);
     WritableMap props = Arguments.createMap();
@@ -53,22 +56,24 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
     callback.invoke(NULL, props);
   }
 
-  protected MediaPlayer createMediaPlayer(final String fileName) {
+  protected EMAudioPlayer createMediaPlayer(final String fileName) {
     int res = this.context.getResources().getIdentifier(fileName, "raw", this.context.getPackageName());
     if (res != 0) {
-      return MediaPlayer.create(this.context, res);
+      Log.w(TAG, "Raw files are not supported by Android EMAudioPlayer");
     }
     File file = new File(fileName);
     if (file.exists()) {
       Uri uri = Uri.fromFile(file);
-      return MediaPlayer.create(this.context, uri);
+      EMAudioPlayer player = new EMAudioPlayer(this.context);
+      player.setDataSource(context, uri);
+      return player;
     }
     return null;
   }
 
   @ReactMethod
   public void play(final Integer key, final Callback callback) {
-    MediaPlayer player = this.playerPool.get(key);
+    EMAudioPlayer player = this.playerPool.get(key);
     if (player == null) {
       callback.invoke(false);
       return;
@@ -78,15 +83,14 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
     }
     player.setOnCompletionListener(new OnCompletionListener() {
       @Override
-      public void onCompletion(MediaPlayer mp) {
-        if (!mp.isLooping()) {
+      public void onCompletion() {
+          // No support for looping in EMAudioPlayer
           callback.invoke(true);
-        }
       }
     });
     player.setOnErrorListener(new OnErrorListener() {
       @Override
-      public boolean onError(MediaPlayer mp, int what, int extra) {
+      public boolean onError() {
         callback.invoke(false);
         return true;
       }
@@ -96,7 +100,7 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void pause(final Integer key) {
-    MediaPlayer player = this.playerPool.get(key);
+    EMAudioPlayer player = this.playerPool.get(key);
     if (player != null && player.isPlaying()) {
       player.pause();
     }
@@ -104,7 +108,7 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void stop(final Integer key) {
-    MediaPlayer player = this.playerPool.get(key);
+    EMAudioPlayer player = this.playerPool.get(key);
     if (player != null && player.isPlaying()) {
       player.pause();
       player.seekTo(0);
@@ -113,7 +117,7 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void release(final Integer key) {
-    MediaPlayer player = this.playerPool.get(key);
+    EMAudioPlayer player = this.playerPool.get(key);
     if (player != null) {
       player.release();
       this.playerPool.remove(key);
@@ -122,7 +126,7 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void setVolume(final Integer key, final Float left, final Float right) {
-    MediaPlayer player = this.playerPool.get(key);
+    EMAudioPlayer player = this.playerPool.get(key);
     if (player != null) {
       player.setVolume(left, right);
     }
@@ -130,15 +134,15 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void setLooping(final Integer key, final Boolean looping) {
-    MediaPlayer player = this.playerPool.get(key);
+    EMAudioPlayer player = this.playerPool.get(key);
     if (player != null) {
-      player.setLooping(looping);
+      Log.w(TAG, "EMAudioPlayer does not support looping");
     }
   }
 
   @ReactMethod
   public void setCurrentTime(final Integer key, final Float sec) {
-    MediaPlayer player = this.playerPool.get(key);
+    EMAudioPlayer player = this.playerPool.get(key);
     if (player != null) {
       player.seekTo((int)Math.round(sec * 1000));
     }
@@ -146,7 +150,7 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void getCurrentTime(final Integer key, final Callback callback) {
-    MediaPlayer player = this.playerPool.get(key);
+    EMAudioPlayer player = this.playerPool.get(key);
     if (player == null) {
       callback.invoke(-1, false);
       return;
@@ -173,9 +177,9 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
   public void onCatalystInstanceDestroy() {
     super.onCatalystInstanceDestroy();
 
-    Set<Map.Entry<Integer, MediaPlayer>> entries = playerPool.entrySet();
-    for (Map.Entry<Integer, MediaPlayer> entry : entries) {
-      MediaPlayer mp = entry.getValue();
+    Set<Map.Entry<Integer, EMAudioPlayer>> entries = playerPool.entrySet();
+    for (Map.Entry<Integer, EMAudioPlayer> entry : entries) {
+      EMAudioPlayer mp = entry.getValue();
       if (mp == null) {
         continue;
       }
@@ -184,7 +188,7 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
         mp.setOnPreparedListener(null);
         mp.setOnErrorListener(null);
         if (mp.isPlaying()) {
-          mp.stop();
+          mp.pause();
         }
         mp.reset();
         mp.release();
