@@ -2,7 +2,7 @@
 
 React Native module for playing sound clips on iOS and Android.
 
-This is a fork of a fairly old version of https://github.com/zmxv/react-native-sound, altered to use Google's ExoPlayer audio system on Android. 
+This is a fork of the 0.8.4 version of https://github.com/zmxv/react-native-sound, altered to use Google's ExoPlayer audio system on Android. 
 It will not be updated regularly - most people should use the original version.
 
 ## Installation
