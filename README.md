@@ -5,27 +5,6 @@ React Native module for playing sound clips on iOS and Android.
 This is a fork of a fairly old version of https://github.com/zmxv/react-native-sound, altered to use Google's ExoPlayer audio system on Android. 
 It will not be updated regularly - most people should use the original version.
 
-
-## Feature matrix
-
-Feature | iOS | Android
----|---|---|---
-Load sound from the app bundle | ✓ | ✓
-Load sound from other directories | ✓ | ✓
-Load sound from the network | |
-Play sound | ✓ | ✓
-Playback completion callback | ✓ | ✓
-Pause | ✓ | ✓
-Resume | ✓ | ✓
-Stop | ✓ | ✓
-Release resource | ✓ | ✓
-Get duration | ✓ | ✓
-Get number of channels | ✓ |
-Get/set volume | ✓ | ✓
-Get/set pan |  |
-Get/set loops | ✓ | 
-Get/set current time | ✓ | ✓
-
 ## Installation
 
 First install the npm package from your app directory:
