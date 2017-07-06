@@ -1,6 +1,8 @@
-# react-native-sound
+# react-native-sound-exoplayer
 
 React Native module for playing sound clips on iOS and Android.
+
+> THIS FORK USES EXOPLAYER TO PLAY AUDIO ON ANDROID
 
 ## Feature matrix
 
@@ -18,8 +20,8 @@ Release resource | ✓ | ✓
 Get duration | ✓ | ✓
 Get number of channels | ✓ |
 Get/set volume | ✓ | ✓
-Get/set pan | ✓ |
-Get/set loops | ✓ | ✓
+Get/set pan |  |
+Get/set loops | ✓ | 
 Get/set current time | ✓ | ✓
 
 ## Installation
@@ -27,95 +29,18 @@ Get/set current time | ✓ | ✓
 First install the npm package from your app directory:
 
 ```javascript
-npm install react-native-sound --save
+npm install react-native-sound-exoplayer --save
 ```
 
-### Installation on iOS
-
-In XCode, right click **Libraries**.
-Click **Add Files to "[Your project]"**.
-Navigate to **node_modules/react-native-sound**.
-Add the file **RNSound.xcodeproj**.
-
-In the *Project Navigator*, select your project.
-Click the build target.
-Click **Build Phases**.
-Expand **Link Binary With Libraries**.
-Click the plus button and add **libRNSound.a** under **Workspace**.
-
-Drag and drop sound files into *Project Navigator* to add them to the project.  Verify that the files are packaged in the app bundle in either way:
-
-* Select a sound file in the *Project Navigator*, tick the checkbox in the *Target Membership* list on the right.
-* Alternatively, click the build target, click **Build Phases**, expand **Copy Bundle Resources**, add the file if it's not already listed.
-
-Run your project (⌘+R).
-
-### Installation on Android
-
-Edit `android/settings.gradle` to declare the project directory:
 ```
-include ':RNSound', ':app'
-project(':RNSound').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-sound/android')
+react-native link react-native-sound-exoplayer
 ```
-
-Edit `android/app/build.gradle` to declare the project dependency:
-```
-dependencies {
-  ...
-  compile project(':RNSound')
-}
-```
-
-Edit `android/app/src/main/java/.../MainActivity.java` to register the native module:
-
-```java
-...
-import com.zmxv.RNSound.RNSoundPackage; // <-- New
-...
-
-public class MainActivity extends ReactActivity {
-  ...
-  @Override
-  protected List<ReactPackage> getPackages() {
-    return Arrays.<ReactPackage>asList(
-        new MainReactPackage(),
-        new RNSoundPackage() // <-- New
-    );
-  }
-```
-
-For older `MainActivity.java` templates, edit as follows:
-
-```java
-...
-import com.zmxv.RNSound.RNSoundPackage; // <-- New
-...
-
-public class MainActivity extends Activity implements DefaultHardwareBackBtnHandler {
-  ...
-    @Override
-  protected void onCreate(Bundle savedInstanceState){
-    ...
-    mReactInstanceManager = ReactInstanceManager.builder()
-      .setApplication(getApplication())
-      ...
-      .addPackage(new MainReactPackage())
-      .addPackage(new RNSoundPackage()) // <-- New
-      ...
-  }
-```
-
-Save your sound clip files under the directory `android/app/src/main/res/raw`, or any other directory in which case you need to pass the full path into the Sound constructor.
-
-## Demo project
-
-https://github.com/zmxv/react-native-sound-demo
 
 ## Basic usage
 
 ```js
 // Import the react-native-sound module
-var Sound = require('react-native-sound');
+var Sound = require('react-native-sound-exoplayer');
 
 // Load the sound file 'whoosh.mp3' from the app bundle
 // See notes below about preloading sounds within initialization code below.
