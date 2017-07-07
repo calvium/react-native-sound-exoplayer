@@ -22,9 +22,17 @@ import java.util.Set;
 
 public class RNSoundModule extends ReactContextBaseJavaModule {
   private static final String TAG = RNSoundModule.class.getSimpleName();
+
+  /**
+   * Holds player and additional info about it (currently just looping status)
+   */
+  static class PlayerInfo {
+    public AudioPlayer audioPlayer;
+    public boolean looping = false;
+  }
   
   @SuppressLint("UseSparseArrays")
-  Map<Integer, AudioPlayer> playerPool = new HashMap<>();
+  Map<Integer, PlayerInfo> playerPool = new HashMap<>();
   ReactApplicationContext context;
   final static Object NULL = null;
 
@@ -62,7 +70,9 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
     } catch (Exception e) {
       Log.w(TAG, "Error preparing audio with " + e.getLocalizedMessage());
     }
-    this.playerPool.put(key, player);
+    PlayerInfo info = new PlayerInfo();
+    info.audioPlayer = player;
+    this.playerPool.put(key, info);
   }
 
   protected AudioPlayer createMediaPlayer(final String fileName) {
@@ -82,23 +92,34 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void play(final Integer key, final Callback callback) {
-    final AudioPlayer player = this.playerPool.get(key);
-    if (player == null) {
+    final PlayerInfo info = this.playerPool.get(key);
+    if (info == null || info.audioPlayer == null) {
       callback.invoke(false);
       return;
     }
+
+    final AudioPlayer player = info.audioPlayer;
+
     if (player.isPlaying()) {
       return;
     }
     player.setOnCompletionListener(new OnCompletionListener() {
       @Override
       public void onCompletion() {
+
+        // Hopefully this will loop it
+        if (info.looping) {
+          player.pause();
+          player.seekTo(0);
+          player.start();
+          return;
+        }
+
         // https://github.com/brianwernick/ExoMedia/issues/382
         // 'rewind' so we can play it again later
         player.pause();
         player.seekTo(0);
 
-        // No support for looping in AudioPlayer
         callback.invoke(true);
       }
     });
@@ -114,7 +135,11 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void pause(final Integer key) {
-    AudioPlayer player = this.playerPool.get(key);
+    PlayerInfo info = this.playerPool.get(key);
+    if (info == null) {
+      return;
+    }
+    AudioPlayer player = info.audioPlayer;
     if (player != null && player.isPlaying()) {
       player.pause();
     }
@@ -122,7 +147,11 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void stop(final Integer key) {
-    AudioPlayer player = this.playerPool.get(key);
+    PlayerInfo info = this.playerPool.get(key);
+    if (info == null) {
+      return;
+    }
+    AudioPlayer player = info.audioPlayer;
     if (player != null && player.isPlaying()) {
       player.pause();
       player.seekTo(0);
@@ -131,7 +160,11 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void release(final Integer key) {
-    AudioPlayer player = this.playerPool.get(key);
+    PlayerInfo info = this.playerPool.get(key);
+    if (info == null) {
+      return;
+    }
+    AudioPlayer player = info.audioPlayer;
     if (player != null) {
       player.release();
       this.playerPool.remove(key);
@@ -140,7 +173,11 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void setVolume(final Integer key, final Float left, final Float right) {
-    AudioPlayer player = this.playerPool.get(key);
+    PlayerInfo info = this.playerPool.get(key);
+    if (info == null) {
+      return;
+    }
+    AudioPlayer player = info.audioPlayer;
     if (player != null) {
       player.setVolume(left, right);
     }
@@ -148,15 +185,20 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void setLooping(final Integer key, final Boolean looping) {
-    AudioPlayer player = this.playerPool.get(key);
-    if (player != null) {
-      Log.w(TAG, "AudioPlayer does not support looping");
+    PlayerInfo info = this.playerPool.get(key);
+    if (info == null) {
+      return;
     }
+    info.looping = true;
   }
 
   @ReactMethod
   public void setCurrentTime(final Integer key, final Float sec) {
-    AudioPlayer player = this.playerPool.get(key);
+    PlayerInfo info = this.playerPool.get(key);
+    if (info == null) {
+      return;
+    }
+    AudioPlayer player = info.audioPlayer;
     if (player != null) {
       player.seekTo(Math.round(sec * 1000));
     }
@@ -164,7 +206,11 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void getCurrentTime(final Integer key, final Callback callback) {
-    AudioPlayer player = this.playerPool.get(key);
+    PlayerInfo info = this.playerPool.get(key);
+    if (info == null) {
+      return;
+    }
+    AudioPlayer player = info.audioPlayer;
     if (player == null) {
       callback.invoke(-1, false);
       return;
@@ -191,21 +237,25 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
   public void onCatalystInstanceDestroy() {
     super.onCatalystInstanceDestroy();
 
-    Set<Map.Entry<Integer, AudioPlayer>> entries = playerPool.entrySet();
-    for (Map.Entry<Integer, AudioPlayer> entry : entries) {
-      AudioPlayer mp = entry.getValue();
-      if (mp == null) {
+    Set<Map.Entry<Integer, PlayerInfo>> entries = playerPool.entrySet();
+    for (Map.Entry<Integer, PlayerInfo> entry : entries) {
+      PlayerInfo info = entry.getValue();
+      if (info == null) {
+        continue;
+      }
+      AudioPlayer player = info.audioPlayer;
+      if (player == null) {
         continue;
       }
       try {
-        mp.setOnCompletionListener(null);
-        mp.setOnPreparedListener(null);
-        mp.setOnErrorListener(null);
-        if (mp.isPlaying()) {
-          mp.pause();
+        player.setOnCompletionListener(null);
+        player.setOnPreparedListener(null);
+        player.setOnErrorListener(null);
+        if (player.isPlaying()) {
+          player.pause();
         }
-        mp.reset();
-        mp.release();
+        player.reset();
+        player.release();
       } catch (Exception ex) {
         Log.e("RNSoundModule", "Exception when closing audios during app exit. ", ex);
       }
