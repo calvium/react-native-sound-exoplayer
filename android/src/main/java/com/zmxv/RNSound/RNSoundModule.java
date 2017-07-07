@@ -6,6 +6,7 @@ import android.util.Log;
 import com.devbrackets.android.exomedia.EMAudioPlayer;
 import com.devbrackets.android.exomedia.listener.OnCompletionListener;
 import com.devbrackets.android.exomedia.listener.OnErrorListener;
+import com.devbrackets.android.exomedia.listener.OnPreparedListener;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
@@ -37,7 +38,7 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void prepare(final String fileName, final Integer key, final Callback callback) {
-    EMAudioPlayer player = createMediaPlayer(fileName);
+    final EMAudioPlayer player = createMediaPlayer(fileName);
     if (player == null) {
       WritableMap e = Arguments.createMap();
       e.putInt("code", -1);
@@ -46,14 +47,20 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
       return;
     }
     try {
+      player.setOnPreparedListener(new OnPreparedListener() {
+        @Override
+        public void onPrepared() {
+          player.setOnPreparedListener(null);
+          WritableMap props = Arguments.createMap();
+          props.putDouble("duration", player.getDuration() * .001);
+          callback.invoke(NULL, props);
+        }
+      });
       player.prepareAsync();
     } catch (Exception e) {
       Log.w(TAG, "Error preparing audio with " + e.getLocalizedMessage());
     }
     this.playerPool.put(key, player);
-    WritableMap props = Arguments.createMap();
-    props.putDouble("duration", player.getDuration() * .001);
-    callback.invoke(NULL, props);
   }
 
   protected EMAudioPlayer createMediaPlayer(final String fileName) {
