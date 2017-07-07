@@ -82,7 +82,7 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void play(final Integer key, final Callback callback) {
-    AudioPlayer player = this.playerPool.get(key);
+    final AudioPlayer player = this.playerPool.get(key);
     if (player == null) {
       callback.invoke(false);
       return;
@@ -93,8 +93,13 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
     player.setOnCompletionListener(new OnCompletionListener() {
       @Override
       public void onCompletion() {
-          // No support for looping in AudioPlayer
-          callback.invoke(true);
+        // https://github.com/brianwernick/ExoMedia/issues/382
+        // 'rewind' so we can play it again later
+        player.pause();
+        player.seekTo(0);
+
+        // No support for looping in AudioPlayer
+        callback.invoke(true);
       }
     });
     player.setOnErrorListener(new OnErrorListener() {
