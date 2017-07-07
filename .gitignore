@@ -23,3 +23,8 @@ DerivedData
 *.ipa
 *.xcuserstate
 
+android/.gradle
+android/.idea
+local.properties
+android/gradle
+android.iml
