@@ -8,6 +8,7 @@ import com.devbrackets.android.exomedia.AudioPlayer;
 import com.devbrackets.android.exomedia.listener.OnCompletionListener;
 import com.devbrackets.android.exomedia.listener.OnErrorListener;
 import com.devbrackets.android.exomedia.listener.OnPreparedListener;
+import com.devbrackets.android.exomedia.listener.OnSeekCompletionListener;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
@@ -29,8 +30,9 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
   static class PlayerInfo {
     public AudioPlayer audioPlayer;
     public boolean looping = false;
+    public boolean playing = true;
   }
-  
+
   @SuppressLint("UseSparseArrays")
   Map<Integer, PlayerInfo> playerPool = new HashMap<>();
   ReactApplicationContext context;
@@ -100,6 +102,9 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
 
     final AudioPlayer player = info.audioPlayer;
 
+    // Allow trying to play if already playing - quite safe
+    info.playing = true;
+
     if (player.isPlaying()) {
       return;
     }
@@ -107,11 +112,24 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
       @Override
       public void onCompletion() {
 
-        // Hopefully this will loop it
         if (info.looping) {
           player.pause();
+
+          // Calling .start() immediately here doesn't work.
+          // Need to wait for the seek to complete
+          player.setOnSeekCompletionListener(new OnSeekCompletionListener() {
+            @Override
+            public void onSeekComplete() {
+              // Just in case we've been stopped *while* waiting for the seek to complete
+              if (info.playing) {
+                player.start();
+                player.setOnSeekCompletionListener(null);
+              } else {
+                Log.w(TAG, "Audio stopping while waiting for loop to re-start");
+              }
+            }
+          });
           player.seekTo(0);
-          player.start();
           return;
         }
 
@@ -139,6 +157,7 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
     if (info == null) {
       return;
     }
+    info.playing = false;
     AudioPlayer player = info.audioPlayer;
     if (player != null && player.isPlaying()) {
       player.pause();
@@ -152,6 +171,7 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
       return;
     }
     AudioPlayer player = info.audioPlayer;
+    info.playing = false;
     if (player != null && player.isPlaying()) {
       player.pause();
       player.seekTo(0);
@@ -164,6 +184,7 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
     if (info == null) {
       return;
     }
+    info.playing = false;
     AudioPlayer player = info.audioPlayer;
     if (player != null) {
       player.release();
