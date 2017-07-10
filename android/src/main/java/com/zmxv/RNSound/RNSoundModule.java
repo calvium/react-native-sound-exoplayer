@@ -25,11 +25,15 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
   private static final String TAG = RNSoundModule.class.getSimpleName();
 
   /**
-   * Holds player and additional info about it (currently just looping status)
+   * Holds player and additional info about it
    */
   static class PlayerInfo {
     public AudioPlayer audioPlayer;
+    // true if should loop
     public boolean looping = false;
+    // Used to prevent issues when re-starting due to a loop.
+    // There's an unlikely but possible case where stopped audio could be re-looped unexpectedly.
+    // This flag is used to prevent that.
     public boolean playing = true;
   }
 
