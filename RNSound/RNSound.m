@@ -4,6 +4,7 @@
 @implementation RNSound {
   NSMutableDictionary* _playerPool;
   NSMutableDictionary* _callbackPool;
+  NSMutableDictionary* _interruptionsPool;
 }
 
 -(NSMutableDictionary*) playerPool {
@@ -18,6 +19,13 @@
     _callbackPool = [NSMutableDictionary new];
   }
   return _callbackPool;
+}
+
+-(NSMutableDictionary*) interruptionsPool {
+    if (!_interruptionsPool) {
+        _interruptionsPool = [NSMutableDictionary new];
+    }
+    return _interruptionsPool;
 }
 
 -(AVAudioPlayer*) playerForKey:(nonnull NSNumber*)key {
@@ -35,6 +43,44 @@
 -(NSString *) getDirectory:(int)directory {
   return [NSSearchPathForDirectoriesInDomains(directory, NSUserDomainMask, YES) firstObject];
 }
+
+#pragma mark Handle Interruptions
+
+-(void)audioPlayerBeginInterruption:(AVAudioPlayer *)player
+{
+    // Remember that this player was interrupted...
+    NSLog(@"-- interrupted --");
+    NSNumber* key = [self keyForPlayer:player];
+    if (!key) {
+        return;
+    }
+    [[self interruptionsPool] setObject:@true forKey:key];
+}
+
+
+- (void)audioPlayerEndInterruption:(AVAudioPlayer *)player
+{
+    // Was this player paused because it was interrupted?
+    NSNumber* key = [self keyForPlayer:player];
+    if (!key) {
+        return;
+    }
+    NSNumber* wasInterrupted = [[self interruptionsPool] objectForKey:key];
+    if (!wasInterrupted || ![wasInterrupted boolValue]) {
+        return;
+    }
+    [[self interruptionsPool] removeObjectForKey:key];
+    
+    NSLog(@"resume!");
+    
+    // Wait a short while, then resume
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [player prepareToPlay];
+        [player play];
+    });
+}
+
+#pragma Audio System
 
 -(void) audioPlayerDidFinishPlaying:(AVAudioPlayer*)player
                        successfully:(BOOL)flag {
