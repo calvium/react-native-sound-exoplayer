@@ -181,6 +181,7 @@ RCT_EXPORT_METHOD(release:(nonnull NSNumber*)key) {
     [player stop];
     [[self callbackPool] removeObjectForKey:player];
     [[self playerPool] removeObjectForKey:key];
+    [[self interruptionsPool] removeObjectForKey:key];
   }
 }
 
