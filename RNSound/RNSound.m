@@ -64,7 +64,7 @@ RCT_EXPORT_METHOD(enable:(BOOL)enabled) {
   [session setActive: enabled error: nil];
 }
 
-RCT_EXPORT_METHOD(setCategory:(nonnull NSNumber*)key withValue:(NSString*)categoryName) {
+RCT_EXPORT_METHOD(setCategory:(NSString*)categoryName) {
   AVAudioSession *session = [AVAudioSession sharedInstance];
   if ([categoryName isEqual: @"Ambient"]) {
     [session setCategory: AVAudioSessionCategoryAmbient error: nil];
