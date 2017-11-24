@@ -142,8 +142,8 @@ Sound.prototype.setCurrentTime = function(value) {
 };
 
 // ios only
-Sound.prototype.setCategory = function(value) {
-  RNSound.setCategory(this._key, value);
+Sound.setCategory = function(value) {
+  RNSound.setCategory(value);
 };
 
 Sound.enable = function(enabled) {
